@@ -5,6 +5,8 @@ from tinytag import TinyTag
 
 from mpserver.grpc import mmp_pb2 as proto
 
+SONG_ID = 1
+ALBUM_ID = 1
 
 class Protoble:
     """
@@ -26,8 +28,13 @@ class SongModel(Protoble):
     """ A song model which is used to store song information """
 
     def __init__(self, title: str, filepath: str):
+        global SONG_ID
         super(SongModel, self).__init__()
-        self.id = id(self)
+        # self.id = id(self)
+
+        self.id = SONG_ID
+        SONG_ID += 1
+        print("song id:", self.id)
         self.title = title
         self.filepath = filepath
         # This operation can go wrong when another program is using the filepath
@@ -54,8 +61,13 @@ class AlbumModel(Protoble):
         :param title:
         :param location:
         """
+        global ALBUM_ID
         super(AlbumModel, self).__init__()
-        self.id = id(self)
+
+        # self.id = id(self)
+        self.id = ALBUM_ID
+        ALBUM_ID += 1
+        print("album id:", self.id)
         self.title = title
         self.location = location
         self.songlist = []  # type: List[SongModel]

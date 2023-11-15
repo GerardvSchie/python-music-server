@@ -28,7 +28,7 @@ def console_has_color():
     if colors_supported is None:
         plat = sys.platform
         supported_platform = plat != 'Pocket PC' and (plat != 'win32' or 'ANSICON' in os.environ)
-        pycharm_hosted = int(os.environ.get('PYCHARM_HOSTED', 0)) is 1
+        pycharm_hosted = int(os.environ.get('PYCHARM_HOSTED', 0)) == 1
 
         # isatty is not always implemented, #6223.
         is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
