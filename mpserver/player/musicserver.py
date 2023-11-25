@@ -4,13 +4,14 @@ from configparser import RawConfigParser
 import grpc
 
 # Generated gRPC classes
-from mpserver.datamanager import DataManager
-from .grpc import mmp_pb2_grpc as rpc
+from mpserver.player.datamanager import DataManager
+from mpserver.grpc import mmp_pb2_grpc as rpc
 
-from .mediadownloader import MediaDownloader
-from .interfaces import Logger, EventFiring
-from .musicplayer import MusicPlayer
-from .tools import colorstring as c, Colors
+from mpserver.player.mediadownloader import MediaDownloader
+from mpserver.utils.logger import Logger
+from mpserver.utils.event_firing import EventFiring
+from mpserver.player.musicplayer import MusicPlayer
+from mpserver.utils.tools import colorstring as c, Colors
 
 
 class MusicServer(Logger, EventFiring):

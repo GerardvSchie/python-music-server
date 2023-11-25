@@ -1,16 +1,14 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
 import os
 from configparser import RawConfigParser
 from datetime import datetime
 
-from mpserver.config import __version__
-from mpserver.musicserver import MusicServer
-from mpserver.tools import Colors
-from mpserver.tools import colorstring as c
+from mpserver.utils.config import __version__
+from mpserver.player.musicserver import MusicServer
+from mpserver.utils.tools import Colors
+from mpserver.utils.tools import colorstring as c
 
 # TODO: let user select config file from cmd argument
-inifile = 'config.ini'
+inifile = '../config.ini'
 musicserver = None  # type: musicserver.MusicServer
 
 # Start main program

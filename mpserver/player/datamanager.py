@@ -1,20 +1,17 @@
 import os
 from configparser import RawConfigParser
 
-from mpserver.musicplayer import MusicPlayer
-from .grpc import mmp_pb2
-from .grpc import mmp_pb2_grpc as rpc
-from .interfaces import Logger, EventFiring
-from .models import SongModel
-from .tools import Colors
-from .tools import colorstring as c
+from mpserver.player.musicplayer import MusicPlayer
+from mpserver.grpc import mmp_pb2
+from mpserver.grpc import mmp_pb2_grpc as rpc
+from mpserver.utils.logger import Logger
+from mpserver.utils.event_firing import EventFiring
+from mpserver.player.data.song import SongModel
+from mpserver.utils.tools import Colors
+from mpserver.utils.tools import colorstring as c
 
 
 class DataManager(rpc.DataManagerServicer, Logger, EventFiring):
-    """
-    DataManager class
-    """
-
     _section = 'datamanager'
 
     def __init__(self, mplayer: MusicPlayer, config: RawConfigParser):

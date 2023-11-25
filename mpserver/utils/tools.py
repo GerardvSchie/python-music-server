@@ -1,7 +1,7 @@
 import os
 import sys
 
-from .config import LOG
+from mpserver.utils.config import LOG
 
 colors_supported = None
 

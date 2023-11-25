@@ -1,38 +1,7 @@
 import random
 from typing import List, Union
 
-from mpserver.models import SongModel
-
-
-class Stack:
-    """
-    Stack is a Last-In/First-Out(LIFO) data structure which represents a stack of objects.
-    It enables users to pop to and push from the stack.
-    """
-
-    def __init__(self, limit=None):
-        if isinstance(limit, int):
-            self._limit = limit
-        self._items = []
-
-    def is_empty(self) -> bool:
-        return self._items == []
-
-    def push(self, item):
-        if self.size() < self._limit:
-            self._items.append(item)
-
-    def pop(self):
-        return self._items.pop()
-
-    def peek(self):
-        return self._items[len(self._items) - 1]
-
-    def size(self) -> int:
-        return len(self._items)
-
-    def limit(self) -> int:
-        return self._limit
+from mpserver.player.data.song import SongModel
 
 
 class MusicQueue:
@@ -42,9 +11,7 @@ class MusicQueue:
 
     Attributes:
         _pointer    Points to the current index of the queue
-
     """
-
     def __init__(self, songs=None, limit=30):
         if isinstance(limit, int):
             self._limit = limit

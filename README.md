@@ -11,7 +11,7 @@ This repository contains a python music player which acts as a server.
 It uses the vlc python bindings to play the music and gRPC communication to communicate 
 with the Android Application which can be found [here](https://github.com/MelleDijkstra/AndroidMusicPlayerClient)
 
-![Impression](project-files/console-output.png)
+![Impression](data/console-output.png)
 
 ## Installation
 

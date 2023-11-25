@@ -5,7 +5,8 @@ import youtube_dl
 from mpserver.grpc import mmp_pb2_grpc as rpc
 from mpserver.grpc import mmp_pb2
 
-from mpserver.interfaces import Logger, EventFiring
+from mpserver.utils.logger import Logger
+from mpserver.utils.event_firing import EventFiring
 
 
 class MediaDownloader(rpc.MediaDownloaderServicer, Logger, EventFiring):

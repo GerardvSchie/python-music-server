@@ -6,14 +6,16 @@ from typing import List, Union, Tuple
 
 import vlc
 
-from mpserver.config import LOG
-from .datastructures import MusicQueue
-from .grpc import mmp_pb2
-from .grpc import mmp_pb2_grpc as rpc
-from .interfaces import Logger, EventFiring
-from .models import AlbumModel, SongModel
-from .tools import colorstring as c
-from .tools import constrain, Colors
+from mpserver.utils.config import LOG
+from mpserver.datastructure.music_queue import MusicQueue
+from mpserver.grpc import mmp_pb2
+from mpserver.grpc import mmp_pb2_grpc as rpc
+from mpserver.utils.logger import Logger
+from mpserver.utils.event_firing import EventFiring
+from mpserver.player.data.album import AlbumModel
+from mpserver.player.data.song import SongModel
+from mpserver.utils.tools import colorstring as c
+from mpserver.utils.tools import constrain, Colors
 
 
 class MusicPlayer(rpc.MusicPlayerServicer, Logger, EventFiring):
