@@ -79,7 +79,7 @@ class MusicPlayerServicer(object):
         """
         Media Player rpc calls
 
-        Retrieve a list of data, (eg. albums, songs)
+        Retrieve a list of data, (e.g. albums, songs)
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

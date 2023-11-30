@@ -1,7 +1,7 @@
 import random
 from typing import List, Union
 
-from mpserver.player.data.song import SongModel
+from mpserver.player.objects.song import Song
 
 
 class MusicQueue:
@@ -12,14 +12,14 @@ class MusicQueue:
     Attributes:
         _pointer    Points to the current index of the queue
     """
-    def __init__(self, songs=None, limit=30):
-        if isinstance(limit, int):
-            self._limit = limit
+    def __init__(self, songs=None, limit: int = 30):
+        self._limit = limit
         self._pointer = 0
-        if isinstance(songs, list) and len(songs) > 0:
-            self._queue = songs  # type: List[SongModel]
-        else:
-            self._queue = []
+
+        if not songs:
+            songs = list()
+        assert type(songs) is list, "Songs must be a list"
+        self._queue: List[Song] = songs
 
     def add(self, song):
         self._queue.append(song)
@@ -33,7 +33,7 @@ class MusicQueue:
         if self.size() > self._limit:
             del self._queue[0]
 
-    def next(self) -> Union[SongModel, None]:
+    def next(self) -> Union[Song, None]:
         if self._pointer + 1 < len(self._queue):
             self._pointer += 1
             return self.current()
@@ -44,7 +44,7 @@ class MusicQueue:
             return True
         return False
 
-    def previous(self) -> Union[SongModel, None]:
+    def previous(self) -> Union[Song, None]:
         if self._pointer - 1 >= 0:
             self._pointer -= 1
             return self.current()
@@ -55,7 +55,7 @@ class MusicQueue:
             return True
         return False
 
-    def current(self) -> Union[SongModel, None]:
+    def current(self) -> Union[Song, None]:
         if len(self._queue) > 0:
             return self._queue[self._pointer]
         return None
@@ -80,7 +80,7 @@ class MusicQueue:
         self.add(song)
         self._pointer = len(self._queue) - 1
 
-    def replace_all(self, songlist: List[SongModel], pointer: int):
+    def replace_all(self, songlist: List[Song], pointer: int):
         self._queue = songlist
         if 0 < pointer < len(songlist):
             self._pointer = pointer

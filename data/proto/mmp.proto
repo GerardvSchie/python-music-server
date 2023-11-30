@@ -95,7 +95,7 @@ message MMPStatus {
         PLAYING = 1;
         ENDED = 2;
         ERROR = 3;
-        NOTHINGSPECIAL = 4;
+        NOTHING_SPECIAL = 4;
         OPENING = 5;
         PAUSED = 6;
         STOPPED = 7;

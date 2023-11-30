@@ -3,7 +3,6 @@ class EventFiring:
     This class has event firing capabilities.
     You can implement this class when an Observer pattern needs to be used
     """
-
     def __init__(self):
         super(EventFiring, self).__init__()
         self._event_callbacks = {}

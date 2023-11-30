@@ -52,7 +52,7 @@ run the following instructions:
 - Then run `$ pip install -r requirements.txt` to install the packages needed
   
   (If you are installing the MelonMusicPlayer server on raspberry pi this process
-  can take some time. The reason is because the server runs on gRPC which
+  can take some time. The reason is that the server runs on gRPC which
   has to compile when installing for raspbian. This will hopefully be changed in the future (Please be patient!))
 
 - Change any settings needed in `config.ini`. This is the configuration file for the server
@@ -60,7 +60,7 @@ run the following instructions:
   
   Then use a client/controller to connect to the server.
   if you downloaded the source, there should be a `client.py`. Run this in another terminal/process to test the server.
-  The client has quite some functionality but I will not be maintaining them. For full experience use one of the controllers
+  The client has quite some functionality, but I will not be maintaining them. For full experience use one of the controllers
   like the [Android App](https://github.com/MelleDijkstra/AndroidMusicPlayerClient).
 
 [![forthebadge made-with-python](http://ForTheBadge.com/images/badges/made-with-python.svg)](https://www.python.org/)
