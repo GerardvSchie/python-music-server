@@ -5,6 +5,8 @@ import mpserver.utils.logger as logger
 import logging
 import vlc
 
+from queue import Queue
+
 from mpserver.player.objects.song import Song
 from mpserver.utils.config_parser import MusicServerConfigParser as ConfigParser
 
@@ -27,14 +29,18 @@ class VLCTests(unittest.TestCase):
     connected_file = r'C:\Users\gerard\MegaDrive\Documents\GitRepos\Python\python-music-server\data\sound\connected.mp3'
 
     def setUp(self):
+        logger.initialize()
         self.music_queue = MusicQueue()
         self.player: VLCPlayer = VLCPlayer(self.music_queue, self.__on_finish)
         self.player.change_volume(80)
-        logger.initialize()
 
-    def __on_finish(self, _):
-        self.__set_media()
+    def tearDown(self):
+        self.player.shutdown()
+
+    def __on_finish(self):
         print("finished")
+        self.player.play_next()
+        print("set media")
 
     # def test_can_play_file(self):
     #     self.player.play_file(ConfigParser.on_connected())
@@ -64,21 +70,9 @@ class VLCTests(unittest.TestCase):
 
     def test_queue_song(self):
         self.player.play(Song("Sample", self.sample_file))
-        # self.player.music_queue.add(Song("Connected", self.connected_file))
-        self.player._set_position(0.97)
-        # time.sleep(1)
-        # self.__set_media()
-        # time.sleep(1)
-        # thread = threading.Thread(self.__set_media())
-        # thread.start()
+        self.player.music_queue.add(Song("Connected", self.connected_file))
+        self.player.vlc_player.set_position(0.97)
         time.sleep(8)
-
-    def __set_media(self):
-        logging.debug("Before set media")
-        self.player.vlc_player.set_mrl(self.connected_file)
-        logging.debug("Before play")
-        self.player.vlc_player.play()
-        logging.debug("after play")
 
     # def test_stream_mixcloud(self):
     #     url = 'http://stream6.mixcloud.com/secure/c/m4a/64/4/e/3/5/b074-a7ef-4da5-a2cf-a390da945cbb.m4a?sig' \

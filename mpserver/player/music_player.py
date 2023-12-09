@@ -5,28 +5,24 @@ from mpserver.datastructure.music_queue import MusicQueue
 from mpserver.grpc import mmp_pb2
 from mpserver.grpc import mmp_pb2_grpc as rpc
 from mpserver.player.vlc_player import VLCPlayer
-from mpserver.utils.config_parser import MusicServerConfigParser as ConfigParser
 from mpserver.utils.mmp_response_utils import error_response, ok_response, empty_response
 from mpserver.utils.player_utils import get_albums_and_songs, find_album_by_id, find_song_by_id
 
 
 class MusicPlayer(rpc.MusicPlayerServicer):
+    albums = get_albums_and_songs()
+    close_streams = False
+    last_update_time = 0
+    music_queue = MusicQueue()
+
     def __init__(self):
         super(MusicPlayer, self).__init__()
-        self.close_streams = False
-        self.last_update_time = 0
-        self.music_queue = MusicQueue()
         self._player: VLCPlayer = VLCPlayer(self.music_queue, self.__on_finish)
-        self.albums = get_albums_and_songs()
 
-    def __on_finish(self, _):
-        logging.debug("ON FINISH CALLED")
+    def __on_finish(self):
         play_next = self._player.play_next()
         if not play_next:
-            logging.debug("NO NEXT SO FINISH")
             self._player.finished()
-        else:
-            logging.debug("NEXT FOUND, UPDATE TIMER")
 
         self.__update_timer()
 
@@ -100,10 +96,7 @@ class MusicPlayer(rpc.MusicPlayerServicer):
         logging.info("Next")
         plays_next = self._player.play_next()
         if plays_next:
-            logging.debug("Updated timer")
             self.__update_timer()
-        else:
-            logging.debug("Did not play next")
 
         return empty_response()
 
@@ -136,12 +129,10 @@ class MusicPlayer(rpc.MusicPlayerServicer):
         # when client subscribes return first status
         yield self._player.mmp_status()
         last_status_time = int(time.time())
-        print(self.last_update_time, last_status_time, self.last_update_time > last_status_time)
         # keep this stream open, so we can push updates when needed
         while not self.close_streams:
             # keep checking if clients should be notified
             while self.last_update_time > last_status_time:
-                print(self.last_update_time, last_status_time, self.last_update_time > last_status_time)
                 last_status_time = self.last_update_time
                 yield self._player.mmp_status()
 

@@ -14,10 +14,10 @@ def get_albums_and_songs() -> List[Album]:
     for album in albums:
         album.song_list = _music_list_from_folder(album.location)
 
-    if not len(albums):
-        logging.warning(f"No albums found in {ConfigParser.music_location()}")
-    else:
+    if len(albums):
         logging.debug(f"{len(albums)} albums found")
+    else:
+        logging.warning(f"No albums found in {ConfigParser.music_location()}")
 
     return albums
 

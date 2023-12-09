@@ -1,5 +1,7 @@
 import vlc
 import logging
+import threading
+from queue import Queue
 
 from mpserver.datastructure.music_queue import MusicQueue
 from mpserver.grpc import mmp_pb2
@@ -13,68 +15,74 @@ class VLCPlayer(EventFiring):
         This class can play music with the vlc library it keeps track of which file it is playing.
         This class has: play, pause, etc. controls. It also manages which albums/songs there are
     """
+    event_queue = Queue()
+
     def __init__(self, music_queue: MusicQueue, on_finish):
         super().__init__()
         self.music_queue = music_queue
-        self.v: vlc.Instance = vlc.Instance('--novideo')
-        self.vlc_player: vlc.MediaPlayer = self.v.media_player_new()
-        self.vlc_player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, on_finish)
+        self.call_back = on_finish
+
+        # VLC stuff
+        self.instance: vlc.Instance = vlc.Instance('--novideo')
+        self.vlc_player: vlc.MediaPlayer = self.instance.media_player_new()
+        self.vlc_player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self.on_end_reached)
+
+        # Event thread
+        self.event_thread = threading.Thread(target=self.event_handler)
+        self.event_thread.start()
 
     def play(self, song: Song, add_to_queue=True) -> bool:
-        if self._is_playing():
-            logging.warning("Cannot play since it is already playing")
-            return False
+        if self.vlc_player.is_playing():
+            logging.warning("Playing new song whilst another song is currently playing")
 
         logging.debug(f"Play: {song.title} (id={song.id} addToQueue={add_to_queue})")
         if add_to_queue:
-            logging.debug("Added to queue!!")
-            self.music_queue.add(song)
+            self.music_queue.latest(song)
 
+        logging.info("Music queue: " + str(self.music_queue))
         try:
-            logging.info(f"Before new media {song.filepath}")
-            media = self.v.media_new(song.filepath)
-            logging.info("Set Media")
+            media = self.instance.media_new(song.filepath)
+            # NOTE: This line can magically stop if you call it from the VLC eventhandler itself
             self.vlc_player.set_media(media)
-            logging.info("Play")
             self.vlc_player.play()
-            logging.info("Play VLC")
         except vlc.VLCException as e:
             logging.warning(e)
             return False
         except Exception as e:
             logging.warning(e)
+            return False
 
-        # wait for song to actual playing
+        # Wait for song to actual playing
         while not self.vlc_player.is_playing():
             pass
 
-        logging.info("Playing")
         self._fire_event(Events.PLAYING)
-        logging.info("Fired event")
         return True
 
     def play_previous(self) -> bool:
+        logging.info("Music queue: " + str(self.music_queue))
         prev_song = self.music_queue.previous()
         if not prev_song:
-            logging.error("No previous song found")
+            logging.warning("No previous song found")
             return False
 
-        self._fire_event(Events.PLAY_PREV)
         logging.debug("Play previous song")
+        self._fire_event(Events.PLAY_PREV)
         return self.play(prev_song, False)
 
     def play_next(self):
+        logging.info("Music queue: " + str(self.music_queue))
         next_song = self.music_queue.next()
         if not next_song:
             logging.warning("No next song found")
             return False
 
-        self._fire_event(Events.PLAY_NEXT)
         logging.debug("Play next song")
+        self._fire_event(Events.PLAY_NEXT)
         return self.play(next_song, False)
 
     def finished(self):
-        logging.debug("Song finished")
+        logging.debug("Player finished")
         self.vlc_player.set_position(1)
         self._fire_event(Events.FINISHED)
         return True
@@ -85,7 +93,7 @@ class VLCPlayer(EventFiring):
             return False
 
         logging.debug(f"Setting volume from {self._get_volume()} -> {volume}")
-        self._set_volume(volume)
+        self.vlc_player.audio_set_volume(volume)
         self._fire_event(Events.VOLUME_CHANGE)
         return True
 
@@ -112,7 +120,9 @@ class VLCPlayer(EventFiring):
 
     def shutdown(self):
         logging.debug("Shutting down")
-        return self.stop()
+        self.stop()
+        self.event_queue.put("Stop")
+        self.event_thread.join()
 
     def set_position(self, pos: float):
         # Sets the position in the song
@@ -120,6 +130,21 @@ class VLCPlayer(EventFiring):
         self.vlc_player.set_position(pos / 100)
         self._fire_event(Events.POS_CHANGE)
         return True
+
+    def event_handler(self):
+        while True:
+            # Block until an event is received or timeout to check the stop signal
+            event = self.event_queue.get()
+            logging.debug("Got event: " + event)
+
+            if event == "EndReached":
+                # Call the function to handle the end reached event
+                self.call_back()
+            elif event == "Stop":
+                return
+
+    def on_end_reached(self, _):
+        self.event_queue.put("EndReached")
 
     def mmp_status(self):
         status = mmp_pb2.MMPStatus()
@@ -131,7 +156,7 @@ class VLCPlayer(EventFiring):
         status.volume = self._get_volume()
         status.mute = self.vlc_player.audio_get_mute()
 
-        position = self._get_position()
+        position =  self.vlc_player.get_position()
         if position == -1:
             status.position = -1
         else:
@@ -143,7 +168,7 @@ class VLCPlayer(EventFiring):
         else:
             status.elapsed_time = int(time / 1000)
 
-        logging.debug(f"\n{str(status)}")
+        logging.debug("\n" + str(status).rstrip('\n'))
 
         return status
 
@@ -154,23 +179,8 @@ class VLCPlayer(EventFiring):
         except ValueError:
             return mmp_pb2.MMPStatus.NOTHING_SPECIAL
 
-    def _is_playing(self):
-        return self.vlc_player.is_playing()
-
     def _get_volume(self):
         return self.vlc_player.audio_get_volume()
-
-    def _set_volume(self, volume):
-        self.vlc_player.audio_set_volume(volume)
-
-    def _get_mute(self):
-        return self.vlc_player.audio_get_mute()
-
-    def _get_position(self):
-        return self.vlc_player.get_position()
-
-    def _set_position(self, position):
-        self.vlc_player.set_position(position)
 
 
 def clamp(value, lower_limit, upper_limit):

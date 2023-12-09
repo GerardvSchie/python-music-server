@@ -71,7 +71,7 @@ class MusicQueue:
         return str(self)
 
     def __str__(self):
-        return str(self._queue)
+        return f"Point: {self._pointer} {self._queue}"
 
     def __len__(self):
         return len(self._queue)
