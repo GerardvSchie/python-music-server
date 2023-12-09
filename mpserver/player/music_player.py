@@ -16,8 +16,19 @@ class MusicPlayer(rpc.MusicPlayerServicer):
         self.close_streams = False
         self.last_update_time = 0
         self.music_queue = MusicQueue()
-        self._player: VLCPlayer = VLCPlayer(self.music_queue)
+        self._player: VLCPlayer = VLCPlayer(self.music_queue, self.__on_finish)
         self.albums = get_albums_and_songs()
+
+    def __on_finish(self, _):
+        logging.debug("ON FINISH CALLED")
+        play_next = self._player.play_next()
+        if not play_next:
+            logging.debug("NO NEXT SO FINISH")
+            self._player.finished()
+        else:
+            logging.debug("NEXT FOUND, UPDATE TIMER")
+
+        self.__update_timer()
 
     def RetrieveAlbumList(self, request: mmp_pb2.MediaData, context):
         logging.info("RetrieveAlbumList")
@@ -40,27 +51,32 @@ class MusicPlayer(rpc.MusicPlayerServicer):
 
     def Play(self, request, context):
         logging.info("Play")
+        update = False
         if request.state == mmp_pb2.MediaControl.PLAY:
-            if request.song_id == 0:
-                return empty_response()
-
+            assert request.song_id > 1
             album, song = find_song_by_id(self.albums, request.song_id)
             if not song:
                 return error_response(f"Song with id {request.song_id} does not exist")
 
-            self._player.play(song)
+            logging.info("Play song")
+            update = self._player.play(song)
         elif request.state == mmp_pb2.MediaControl.PAUSE:
-            self._player.pause()
+            logging.info("Pause song")
+            update = self._player.pause()
         elif request.state == mmp_pb2.MediaControl.STOP:
-            self._player.stop()
+            logging.info("Stop song")
+            update = self._player.stop()
 
-        self.__update_timer()
+        if update:
+            self.__update_timer()
+
         return ok_response()
 
     def ChangeVolume(self, request: mmp_pb2.VolumeControl, context):
-        logging.info("Play")
-        self._player.change_volume(request.volume_level)
-        self.__update_timer()
+        logging.info("Change volume")
+        if self._player.change_volume(request.volume_level):
+            self.__update_timer()
+
         return empty_response()
 
     def ChangePosition(self, request: mmp_pb2.PositionControl, context):
@@ -71,18 +87,24 @@ class MusicPlayer(rpc.MusicPlayerServicer):
             self.__update_timer()
             return ok_response()
 
-        return error_response("Vol not defined or not a number [0-100)")
+        return error_response("Pos not defined or not a number [0-100)")
 
     def Previous(self, request: mmp_pb2.PlaybackControl, context):
         logging.info("Previous")
-        self._player.play_previous()
-        self.__update_timer()
+        if self._player.play_previous():
+            self.__update_timer()
+
         return empty_response()
 
     def Next(self, request, context):
         logging.info("Next")
-        self._player.play_next()
-        self.__update_timer()
+        plays_next = self._player.play_next()
+        if plays_next:
+            logging.debug("Updated timer")
+            self.__update_timer()
+        else:
+            logging.debug("Did not play next")
+
         return empty_response()
 
     def AddNext(self, request: mmp_pb2.MediaData, context):
@@ -106,19 +128,23 @@ class MusicPlayer(rpc.MusicPlayerServicer):
         return error_response(f"Song with id {request.id} does not exist")
 
     def RetrieveMMPStatus(self, request: mmp_pb2.MMPStatusRequest, context):
+        logging.debug(request)
         return self._player.mmp_status()
 
     def RegisterMMPNotify(self, request: mmp_pb2.MMPStatusRequest, context):
-        self._player.play_file(ConfigParser.on_connected())
+        logging.debug(request)
         # when client subscribes return first status
         yield self._player.mmp_status()
         last_status_time = int(time.time())
+        print(self.last_update_time, last_status_time, self.last_update_time > last_status_time)
         # keep this stream open, so we can push updates when needed
         while not self.close_streams:
             # keep checking if clients should be notified
             while self.last_update_time > last_status_time:
+                print(self.last_update_time, last_status_time, self.last_update_time > last_status_time)
                 last_status_time = self.last_update_time
                 yield self._player.mmp_status()
 
     def __update_timer(self):
+        logging.debug("Updated timer")
         self.last_update_time = int(time.time())

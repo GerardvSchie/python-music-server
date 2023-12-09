@@ -44,7 +44,7 @@ class MusicServer(EventFiring):
 
     def shutdown(self):
         logging.info("Shutting down gRPC Server")
-        self._mplayer._player.shutdown()
         self._mplayer.close_streams = True
+        self._mplayer._player.shutdown()
         if self._gserver:
             self._gserver.stop(0)

@@ -17,7 +17,7 @@ def get_albums_and_songs() -> List[Album]:
     if not len(albums):
         logging.warning(f"No albums found in {ConfigParser.music_location()}")
     else:
-        logging.debug(f"Albums found: {albums}")
+        logging.debug(f"{len(albums)} albums found")
 
     return albums
 

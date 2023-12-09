@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import List, Union
 
@@ -12,25 +13,21 @@ class MusicQueue:
     Attributes:
         _pointer    Points to the current index of the queue
     """
-    def __init__(self, songs=None, limit: int = 30):
+    def __init__(self, limit: int = 30):
         self._limit = limit
         self._pointer = 0
+        self._queue: List[Song] = list()
 
-        if not songs:
-            songs = list()
-        assert type(songs) is list, "Songs must be a list"
-        self._queue: List[Song] = songs
-
-    def add(self, song):
+    def add(self, song: Song):
         self._queue.append(song)
-        if self.size() > self._limit:
+        if len(self) > self._limit:
             # if the queue is to big then remove the first played item
             del self._queue[0]
 
-    def add_next(self, song):
+    def add_next(self, song: Song):
         self._queue.insert(self._pointer + 1, song)
         # if the list is to big then remove the first item in the list, which was played first
-        if self.size() > self._limit:
+        if len(self) > self._limit:
             del self._queue[0]
 
     def next(self) -> Union[Song, None]:
@@ -60,13 +57,10 @@ class MusicQueue:
             return self._queue[self._pointer]
         return None
 
-    def size(self) -> int:
-        return len(self._queue)
-
     def shuffle(self):
         # TODO: return random song which hasn't played before
         # When using random it is possible an earlier track gets returned
-        self._pointer = random.randrange(0, len(self._queue))
+        self._pointer = random.randrange(0, len(self))
         return self.current()
 
     def clear(self):
@@ -74,15 +68,21 @@ class MusicQueue:
         self._pointer = 0
 
     def __repr__(self):
+        return str(self)
+
+    def __str__(self):
         return str(self._queue)
+
+    def __len__(self):
+        return len(self._queue)
 
     def latest(self, song):
         self.add(song)
-        self._pointer = len(self._queue) - 1
+        self._pointer = len(self) - 1
 
-    def replace_all(self, songlist: List[Song], pointer: int):
-        self._queue = songlist
-        if 0 < pointer < len(songlist):
+    def replace_all(self, song_list: List[Song], pointer: int):
+        self._queue = song_list
+        if 0 < pointer < len(song_list):
             self._pointer = pointer
         else:
             self._pointer = 0

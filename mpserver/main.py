@@ -6,8 +6,8 @@ from mpserver.player.music_server import MusicServer
 
 
 def main():
-    print("\tMelonMusicPlayer made by Melle Dijkstra © " + str(datetime.now().year))
-    print("\tVersion: 3")
+    # print("\tMelonMusicPlayer made by Melle Dijkstra © " + str(datetime.now().year))
+    # print("\tVersion: 3")
 
     music_server = MusicServer()
     try:

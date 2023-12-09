@@ -16,7 +16,9 @@ class MusicServerConfigParser:
 
     @staticmethod
     def max_connections():
-        return config.getint("musicserver", "max_connections", fallback=10)
+        nr_max_connections = config.getint("musicserver", "max_connections", fallback=10)
+        assert nr_max_connections > 2
+        return nr_max_connections
 
     @staticmethod
     def sound_volume():

@@ -1,4 +1,3 @@
-import os
 import vlc
 import logging
 
@@ -6,7 +5,6 @@ from mpserver.datastructure.music_queue import MusicQueue
 from mpserver.grpc import mmp_pb2
 from mpserver.player.objects.event import Events
 from mpserver.player.objects.song import Song
-from mpserver.utils.config_parser import MusicServerConfigParser as ConfigParser
 from mpserver.utils.event_firing import EventFiring
 
 
@@ -15,133 +13,125 @@ class VLCPlayer(EventFiring):
         This class can play music with the vlc library it keeps track of which file it is playing.
         This class has: play, pause, etc. controls. It also manages which albums/songs there are
     """
-    def __init__(self, music_queue: MusicQueue):
+    def __init__(self, music_queue: MusicQueue, on_finish):
         super().__init__()
         self.music_queue = music_queue
         self.v: vlc.Instance = vlc.Instance('--novideo')
         self.vlc_player: vlc.MediaPlayer = self.v.media_player_new()
-        self.vlc_player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self.__song_finished)
-        self.play_file(ConfigParser.on_ready())
+        self.vlc_player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, on_finish)
 
-    def play(self, song: Song, add_to_queue=True):
-        logging.debug(f"Play: {song.title} (id={song.id})")
-        # This can go wrong if another program is using the file
+    def play(self, song: Song, add_to_queue=True) -> bool:
+        if self._is_playing():
+            logging.warning("Cannot play since it is already playing")
+            return False
+
+        logging.debug(f"Play: {song.title} (id={song.id} addToQueue={add_to_queue})")
+        if add_to_queue:
+            logging.debug("Added to queue!!")
+            self.music_queue.add(song)
+
         try:
-            if add_to_queue:
-                self.music_queue.latest(song)
-            self.vlc_player.set_mrl(song.filepath)
+            logging.info(f"Before new media {song.filepath}")
+            media = self.v.media_new(song.filepath)
+            logging.info("Set Media")
+            self.vlc_player.set_media(media)
+            logging.info("Play")
             self.vlc_player.play()
-            # wait for song to actual playing
-            while self.vlc_player.get_state() != vlc.State.Playing:
-                pass
-            self._fire_event(Events.PLAYING)
+            logging.info("Play VLC")
         except vlc.VLCException as e:
             logging.warning(e)
+            return False
+        except Exception as e:
+            logging.warning(e)
 
-    def play_previous(self):
-        # Play previous song from queue
+        # wait for song to actual playing
+        while not self.vlc_player.is_playing():
+            pass
+
+        logging.info("Playing")
+        self._fire_event(Events.PLAYING)
+        logging.info("Fired event")
+        return True
+
+    def play_previous(self) -> bool:
         prev_song = self.music_queue.previous()
         if not prev_song:
-            logging.warning("No previous song")
-            return
+            logging.error("No previous song found")
+            return False
 
-        logging.debug("Play previous song")
         self._fire_event(Events.PLAY_PREV)
-        self.play(prev_song, False)
+        logging.debug("Play previous song")
+        return self.play(prev_song, False)
 
     def play_next(self):
-        # Play next song in queue
         next_song = self.music_queue.next()
         if not next_song:
-            logging.warning("No next song")
-            return
+            logging.warning("No next song found")
+            return False
 
-        logging.debug("Play next song")
         self._fire_event(Events.PLAY_NEXT)
-        self.play(next_song, False)
+        logging.debug("Play next song")
+        return self.play(next_song, False)
 
-    def __song_finished(self, _):
-        """
-        Song finished listener
-        This fires when song is finished
-        """
+    def finished(self):
         logging.debug("Song finished")
-        # when song is finished play next song in the queue
-        if self.music_queue.has_next():
-            self.play_next()
-        else:
-            self.vlc_player.set_position(1)
-            self._fire_event(Events.FINISHED)
-            self.__update_clients()
+        self.vlc_player.set_position(1)
+        self._fire_event(Events.FINISHED)
+        return True
 
     def change_volume(self, volume: int):
-        # TODO: send confirmation that volume changed
-        assert type(volume) is int, "Volume must be an int"
-        new_vol = clamp(volume, 0, 100)
-        if new_vol == self.vlc_player.audio_get_volume():
-            return
+        volume = clamp(int(volume), 0, 100)
+        if volume == self._get_volume():
+            return False
 
-        logging.debug(f"Setting volume from {self.vlc_player.audio_get_volume()} to {new_vol}")
-        self.vlc_player.audio_set_volume(new_vol)
+        logging.debug(f"Setting volume from {self._get_volume()} -> {volume}")
+        self._set_volume(volume)
         self._fire_event(Events.VOLUME_CHANGE)
+        return True
 
     def change_pos(self, pos):
         logging.debug("Change Position")
         # Seek to location of current playing song
-        self.vlc_player.set_time(clamp(pos, 0, self.vlc_player.get_media().get_duration()))
+        self.set_position(pos)
         if not self.vlc_player.is_playing():
             self.vlc_player.play()
+
+        return True
 
     def pause(self):
         logging.debug("Pause")
         self.vlc_player.pause()
         self._fire_event(Events.PAUSING)
+        return True
 
     def stop(self):
-        logging.debug("Stop")
+        logging.debug("Stop vlc")
         self.vlc_player.stop()
         self._fire_event(Events.STOPPING)
+        return True
 
     def shutdown(self):
         logging.debug("Shutting down")
-        self.vlc_player.stop()
-
-    def play_file(self, file: str) -> None:
-        # Play a file without interrupting the original player
-        path = os.path.abspath(file)
-        assert os.path.isfile(path), f"File '{file}' does not exist"
-
-        if self.vlc_player.get_state() == vlc.State.Playing:
-            return
-
-        # create new player so it doesn't disturb the original
-        player = self.v.media_player_new()
-        player.audio_set_volume(self.vlc_player.audio_get_volume())
-        player.set_media(self.v.media_new(file))
-        player.play()
+        return self.stop()
 
     def set_position(self, pos: float):
         # Sets the position in the song
         assert 0 <= pos <= 100, "Position not between 0 and 100"
         self.vlc_player.set_position(pos / 100)
         self._fire_event(Events.POS_CHANGE)
+        return True
 
     def mmp_status(self):
         status = mmp_pb2.MMPStatus()
-        try:
-            # get current vlc state -> replace "State." part -> to uppercase = this should match proto state
-            status.state = mmp_pb2.MMPStatus.State.Value(str(self.vlc_player.get_state()).replace('State.', '').upper())
-        except ValueError:
-            status.state = mmp_pb2.MMPStatus.NOTHING_SPECIAL
-
+        status.state = self._get_mmp_state()
         current_song = self.music_queue.current()
         if current_song:
             status.current_song.CopyFrom(current_song.to_protobuf())
 
-        status.volume = self.vlc_player.audio_get_volume()
+        status.volume = self._get_volume()
         status.mute = self.vlc_player.audio_get_mute()
 
-        position = self.vlc_player.get_position()
+        position = self._get_position()
         if position == -1:
             status.position = -1
         else:
@@ -151,11 +141,36 @@ class VLCPlayer(EventFiring):
         if time == -1:
             status.elapsed_time = -1
         else:
-            status.elapsed_time = time / 1000
+            status.elapsed_time = int(time / 1000)
 
         logging.debug(f"\n{str(status)}")
 
         return status
+
+    def _get_mmp_state(self):
+        try:
+            # get current vlc state -> replace "State." part -> to uppercase = this should match proto state
+            return mmp_pb2.MMPStatus.State.Value(str(self.vlc_player.get_state()).replace('State.', '').upper())
+        except ValueError:
+            return mmp_pb2.MMPStatus.NOTHING_SPECIAL
+
+    def _is_playing(self):
+        return self.vlc_player.is_playing()
+
+    def _get_volume(self):
+        return self.vlc_player.audio_get_volume()
+
+    def _set_volume(self, volume):
+        self.vlc_player.audio_set_volume(volume)
+
+    def _get_mute(self):
+        return self.vlc_player.audio_get_mute()
+
+    def _get_position(self):
+        return self.vlc_player.get_position()
+
+    def _set_position(self, position):
+        self.vlc_player.set_position(position)
 
 
 def clamp(value, lower_limit, upper_limit):
