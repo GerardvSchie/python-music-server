@@ -46,10 +46,9 @@ class MusicPlayer(rpc.MusicPlayerServicer):
         return response
 
     def Play(self, request, context):
-        logging.info("Play")
         update = False
         if request.state == mmp_pb2.MediaControl.PLAY:
-            assert request.song_id > 1
+            assert request.song_id >= 1
             album, song = find_song_by_id(self.albums, request.song_id)
             if not song:
                 return error_response(f"Song with id {request.song_id} does not exist")
@@ -121,7 +120,7 @@ class MusicPlayer(rpc.MusicPlayerServicer):
         return error_response(f"Song with id {request.id} does not exist")
 
     def RetrieveMMPStatus(self, request: mmp_pb2.MMPStatusRequest, context):
-        logging.debug(request)
+        logging.debug("REQ: " + request)
         return self._player.mmp_status()
 
     def RegisterMMPNotify(self, request: mmp_pb2.MMPStatusRequest, context):

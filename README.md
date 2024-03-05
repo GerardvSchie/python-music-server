@@ -16,6 +16,7 @@ with the Android Application which can be found [here](https://github.com/MelleD
 ## Installation
 
 ### Windows
+Enable SVM in BIOS if needed. Get a 14.X c++ compiler too :)
 
 Download executable from here
 [Download link]()

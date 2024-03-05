@@ -12,6 +12,6 @@ taskkill /F /FI "WindowTitle eq Melon Music Player" /T>nul
 
 REM Title the instance so it can be identified later
 TITLE Melon Music Player
-"venv\Scripts\python.exe" -m mpserver.main
+".venv\Scripts\python.exe" -m mpserver.main
 
 endlocal

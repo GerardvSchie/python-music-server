@@ -156,7 +156,7 @@ class VLCPlayer(EventFiring):
         status.volume = self._get_volume()
         status.mute = self.vlc_player.audio_get_mute()
 
-        position =  self.vlc_player.get_position()
+        position = self.vlc_player.get_position()
         if position == -1:
             status.position = -1
         else:
@@ -168,7 +168,7 @@ class VLCPlayer(EventFiring):
         else:
             status.elapsed_time = int(time / 1000)
 
-        logging.debug("\n" + str(status).rstrip('\n'))
+        logging.debug("Constructed MMP status:\n" + str(status).rstrip('\n'))
 
         return status
 
